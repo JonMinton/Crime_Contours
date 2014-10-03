@@ -49,7 +49,10 @@ data$convicted <- as.numeric(as.character(data$convicted))
 
 data <- mutate(data, convict_rate = convicted/total)
 
-
+png("figures/all_scotland.png",
+    2000,
+    1000
+    )
 contourplot(
   convict_rate ~ year * age | sex, 
   data=data,
@@ -59,4 +62,6 @@ contourplot(
   cuts=50
   
   )
+
+dev.off()
 
