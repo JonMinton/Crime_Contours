@@ -11,7 +11,8 @@ RequiredPackages(
     "ggplot2",
     "stringr",
     "car",
-    "RColorBrewer"
+    "RColorBrewer",
+    "r2stl"
   )
 )
 
@@ -154,3 +155,77 @@ contourplot(
 dev.off()
 
 
+#########################################################################################
+######## STL Images
+#########################################################################################
+
+
+fn <- function(x){
+  ages <- x$age
+  x$age <- NULL
+  x <- as.matrix(x)
+  x - min(x)
+  rownames(x) <- ages
+  return(x)
+}
+
+convict_matrix_male <- recast(
+  subset(data_younger, subset=sex=="male", select=c("year", "age", "convict_rate")),
+  age ~ year,
+  id.var=c("age", "year"),
+  measure="convict_rate"
+  )
+convict_matrix_male <- fn(convict_matrix_male)
+
+convict_matrix_female <- recast(
+  subset(data_younger, subset=sex=="female", select=c("year", "age", "convict_rate")),
+  age ~ year,
+  id.var=c("age", "year"),
+  measure="convict_rate"
+)
+convict_matrix_female <- fn(convict_matrix_female)
+
+  
+  r2stl(
+    x=as.numeric(rownames(convict_matrix_male)),
+    y=as.numeric(colnames(convict_matrix_male)),
+    z=convict_matrix_male,
+    
+    filename="stl/scot_younger_male.stl",
+    z.expand=T,
+    show.persp=F
+  )
+
+r2stl(
+  x=as.numeric(rownames(convict_matrix_female)),
+  y=as.numeric(colnames(convict_matrix_female)),
+  z=convict_matrix_female,
+  
+  filename="stl/scot_younger_female.stl",
+  z.expand=T,
+  show.persp=F
+)
+
+
+# To do : both as a single stl file: combine matrices
+
+cf <- convict_matrix_female
+cm <- convict_matrix_male
+
+colnames(cf) <- NULL
+colnames(cm) <- NULL
+
+convict_matrix_both <- cbind(cf, cm)
+colnames(convict_matrix_both) <- 1:dim(convict_matrix_both)[2]
+
+
+r2stl(
+  x=as.numeric(rownames(convict_matrix_both)),
+  y=as.numeric(colnames(convict_matrix_both)),
+  z=convict_matrix_both,
+  
+  filename="stl/scot_younger_both_gender.stl",
+  z.expand=T,
+  show.persp=F
+)
+  
