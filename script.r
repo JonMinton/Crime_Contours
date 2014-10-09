@@ -229,3 +229,20 @@ r2stl(
   show.persp=F
 )
   
+
+###############################################################################
+# Age slides:
+
+g1 <- ggplot(data_younger, aes(y=convict_rate, x=age))
+g2 <- g1 + geom_line(aes(colour=sex, linetype=sex))
+g3 <- g2 + facet_wrap( ~ year)
+g4 <- g3 + labs(y="convict rate")
+print(g4)
+
+ggsave(
+  "figures/age_sections.png", width=20, height=20, unit="cm"
+  )
+
+
+
+
