@@ -244,5 +244,35 @@ ggsave(
   )
 
 
+#### Cohort slides:
+
+data_younger <- mutate(data_younger,
+                       cohort=year - age
+                       )
+
+data_younger <- arrange(data_younger, sex, cohort, age)
 
 
+g1 <- ggplot(data_younger,
+             aes(y=convict_rate, x=age)
+             )
+g2 <- g1 + geom_line(aes(colour=sex, linetype=sex))
+g3 <- g2 + facet_wrap( ~ cohort)
+print(g3)
+
+
+# Now just to look at a subset of cohort years:
+
+g1 <- ggplot(
+  subset(data_younger,
+         subset=cohort >=1960 & cohort <= 1985)
+         ,
+             aes(y=convict_rate, x=age)
+)
+g2 <- g1 + geom_line(aes(colour=sex, linetype=sex))
+g3 <- g2 + facet_wrap( ~ cohort)
+print(g3)
+
+ggsave(
+  "figures/cohort_sub_section.png", width=25, height=20, unit="cm"
+)
