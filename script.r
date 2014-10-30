@@ -380,7 +380,9 @@ g2 <- g1 + geom_line(aes(colour=sex, linetype=sex))
 g3 <- g2 + facet_wrap( ~ age)
 
 # This adds a final instruction: label the y axis "convict rate"
-g4 <- g3 + labs(y="convict rate")
+g4 <- g3 + labs(y="convict rate") + theme(
+  axis.text.x = element_text(angle =90, hjust=1, vjust=0.5)
+  )
 
 
 # This command prints the image created to a graphics device. As no
