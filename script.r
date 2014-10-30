@@ -364,3 +364,32 @@ print(g3)
 ggsave(
   "figures/cohort_sub_section.png", width=25, height=20, unit="cm"
 )
+
+
+#### For completeness, age facets as well 
+
+g1 <- ggplot(subset(data_younger, subset=age <=35), aes(y=convict_rate, x=year))
+
+# g2 is g1 plus one more instruction: the colour and the type of line 
+# should both depend on the variable sex: this takes one of two values,
+# so two different line types and colours will be used
+
+g2 <- g1 + geom_line(aes(colour=sex, linetype=sex))
+# This adds another instruction: instead of a single image, produce many 
+# small multiples, showing the above separately for each year
+g3 <- g2 + facet_wrap( ~ age)
+
+# This adds a final instruction: label the y axis "convict rate"
+g4 <- g3 + labs(y="convict rate")
+
+
+# This command prints the image created to a graphics device. As no
+# other graphics device has been stated, the device will be rstudio's internal 
+# display
+print(g4)
+
+# This saves a copy of the graphic created above to a new file.  
+ggsave(
+  "figures/age_facets.png", width=20, height=20, unit="cm"
+)
+
