@@ -146,6 +146,46 @@ contourplot(
 dev.off()
 
 
+# males and females separately
+
+
+# identity scale, younger ages 
+png("figures/all_scot_male.png",
+    1000,
+    1000
+)
+contourplot(
+  convict_rate ~ year * age | sex, 
+  data=subset(data_younger, subset=sex=="male"),
+  region=T, 
+  col.regions=rev(heat.colors(200)), 
+  #  col.regions=rev(gray(0:199/199)),
+  cuts=50
+  
+)
+
+dev.off()
+
+
+# identity scale, younger ages 
+png("figures/all_scot_female.png",
+    1000,
+    1000
+)
+contourplot(
+  convict_rate ~ year * age | sex, 
+  data=subset(data_younger, subset=sex=="female"),
+  region=T, 
+  col.regions=rev(heat.colors(200)), 
+  #  col.regions=rev(gray(0:199/199)),
+  cuts=50
+  
+)
+
+dev.off()
+
+
+
 # how about log scale?
 
 # Using only up to age 60 as too few observations above
