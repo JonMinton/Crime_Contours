@@ -24,6 +24,8 @@ RequiredPackages(
   )
 )
 
+require(tidyr)
+
 # The more usual way of doing the above is to install packages
 # using the install.packages() function
 # then load the package using the require() or library() functions
@@ -69,10 +71,9 @@ data <- mutate(data, convict_rate = convicted/total)
 
 # This creates a new dataset containing only observations in those aged 60 
 # years or younger
-data_younger <- subset(
-  data,
-  subset=age <=60
-  )
+data_younger <- data  %>% 
+  tbl_df  %>% 
+  filter(age <= 60)
 
 
 ###############################################################################
@@ -80,69 +81,58 @@ data_younger <- subset(
 # This is the first image. It uses the function contourplot from the package 
 # lattice. 
 
-# This line creates a graphics device: a 2000 by 1000 pixel png image
-png("figures/all_scotland.png",
-    2000,
-    1000
-    )
-
-# This is the contourplot function. As the png graphics device has been set up in the 
-# previous line, the output of this function is fed to the png graphics device
+png(filename="figures/all_scotland.png", 
+    width=40, height=20, res=300, units="cm"
+)
+# Let's look at the mort rates only
 contourplot(
-  convict_rate ~ year * age | sex, # this argument states how the data should be arranged
-  data=data, # this argument shows the data object where the function should look
-  # in order to find the variables.
-  
-  # The arguments below are additional graphical parameters
+  convict_rate ~ year * age | sex, 
+  data=data, 
   region=T, 
-  col.regions=rev(heat.colors(200)), 
-  #  col.regions=rev(gray(0:199/199)),
-  cuts=50
+  par.strip.text=list(cex=1.4, fontface="bold"),
+  ylab=list(label="Age in years", cex=1.4),
+  xlab=list(label="Year", cex=1.4),
+  cex=1.4,
+  cuts=20,
+  col.regions=colorRampPalette(brewer.pal(6, "Greys"))(200),
+  main=NULL,
+  labels=list(cex=1.2),
+  col="blue",
+  scales=list(
+    x=list(cex=1.4), 
+    y=list(cex=1.4),
+    alternating=3
   )
-
-# this closes the graphics device: the output of the contourplot function
-# is now available to view in a file called all_scotland.png
+)
 dev.off()
 
-
-# how about log scale?
-
-# This does the same as the above, but on a log scale
-png("figures/all_scotland_log.png",
-    2000,
-    1000
-)
-contourplot(
-  log(convict_rate) ~ year * age | sex,  # the only difference is that convict_rate is 
-  # enclosed in the log function
-  data=data,
-  region=T, 
-  col.regions=rev(heat.colors(200)), 
-  #  col.regions=rev(gray(0:199/199)),
-  cuts=50
-  
-)
-
-dev.off()
 
 ####################################################################
 
 
-# identity scale, younger ages 
-png("figures/all_scot_younger.png",
-    2000,
-    1000
+png(filename="figures/all_scot_younger.png", 
+    width=40, height=20, res=300, units="cm"
 )
+# Let's look at the mort rates only
 contourplot(
   convict_rate ~ year * age | sex, 
-  data=data_younger,
+  data=data_younger, 
   region=T, 
-  col.regions=rev(heat.colors(200)), 
-  #  col.regions=rev(gray(0:199/199)),
-  cuts=50
-  
+  par.strip.text=list(cex=1.4, fontface="bold"),
+  ylab=list(label="Age in years", cex=1.4),
+  xlab=list(label="Year", cex=1.4),
+  cex=1.4,
+  cuts=20,
+  col.regions=colorRampPalette(brewer.pal(6, "Greys"))(200),
+  main=NULL,
+  labels=list(cex=1.2),
+  col="blue",
+  scales=list(
+    x=list(cex=1.4), 
+    y=list(cex=1.4),
+    alternating=3
+  )
 )
-
 dev.off()
 
 
@@ -150,104 +140,100 @@ dev.off()
 
 
 # identity scale, younger ages 
-png("figures/all_scot_male.png",
-    1000,
-    1000
+png(filename="figures/male_scot_younger.png", 
+    width=23, height=20, res=300, units="cm"
 )
+# Let's look at the mort rates only
 contourplot(
   convict_rate ~ year * age | sex, 
-  data=subset(data_younger, subset=sex=="male"),
+  data=subset(data_younger, subset=sex=="male"), 
   region=T, 
-  col.regions=rev(heat.colors(200)), 
-  #  col.regions=rev(gray(0:199/199)),
-  cuts=50
-  
+  par.strip.text=list(cex=1.4, fontface="bold"),
+  ylab=list(label="Age in years", cex=1.4),
+  xlab=list(label="Year", cex=1.4),
+  cex=1.4,
+  cuts=20,
+  col.regions=colorRampPalette(brewer.pal(6, "Greys"))(200),
+  main=NULL,
+  labels=list(cex=1.2),
+  col="blue",
+  scales=list(
+    x=list(cex=1.4), 
+    y=list(cex=1.4),
+    alternating=3
+  )
 )
-
 dev.off()
 
 
-# identity scale, younger ages 
-png("figures/all_scot_female.png",
-    1000,
-    1000
+png(filename="figures/female_scot_younger.png", 
+    width=23, height=20, res=300, units="cm"
 )
+# Let's look at the mort rates only
 contourplot(
   convict_rate ~ year * age | sex, 
-  data=subset(data_younger, subset=sex=="female"),
+  data=subset(data_younger, subset=sex=="female"), 
   region=T, 
-  col.regions=rev(heat.colors(200)), 
-  #  col.regions=rev(gray(0:199/199)),
-  cuts=50
-  
+  par.strip.text=list(cex=1.4, fontface="bold"),
+  ylab=list(label="Age in years", cex=1.4),
+  xlab=list(label="Year", cex=1.4),
+  cex=1.4,
+  cuts=20,
+  col.regions=colorRampPalette(brewer.pal(6, "Greys"))(200),
+  main=NULL,
+  labels=list(cex=1.2),
+  col="blue",
+  scales=list(
+    x=list(cex=1.4), 
+    y=list(cex=1.4),
+    alternating=3
+  )
 )
-
-dev.off()
-
-
-
-# how about log scale?
-
-# Using only up to age 60 as too few observations above
-
-png("figures/all_scot_younger_log.png",
-    2000,
-    1000
-)
-contourplot(
-  log(convict_rate) ~ year * age | sex, 
-  data=data_younger,
-  region=T, 
-  col.regions=rev(heat.colors(200)), 
-  #  col.regions=rev(gray(0:199/199)),
-  cuts=50
-  
-)
-
 dev.off()
 
 
 ## Difference between males and females
 
+
 # This looks at the difference between males and females in crime rates
 # at different ages and in different years
 
 # this creates a subset of the data using only the variables of interest
-data_diff <- subset(
-  data_younger,
-  select=c("country", "year", "age", "sex", "convict_rate")
-  )
+
+data_mfratio <- data_younger  %>% 
+  tbl_df   %>% 
+  select(-convicted, -total) %>% 
+  spread(key=sex, value=convict_rate)  %>% 
+  mutate(mf_ratio = male/female)
 
 # this re_arranges the data so that male and female convict_rates
 # are reported in different columns, called male and female
 # It uses the reshape2 package by Hadley Wickham
 
-data_diff <- dcast(data_diff, country + year + age ~ sex)
-
-# This creates another variable, male_excess, which is the difference 
-# between male and female conviction rates for each row
-data_diff <- mutate(data_diff, male_excess = male - female)
-
-# This removes the female and male variables from the dataset
-data_diff$female <- NULL
-data_diff$male <- NULL
-
 
 # This plots male_excess as a function of year and age in a contour plot
-png("figures/all_scot_younger_male_excess.png",
-    1000,
-    1000
+png("figures/mf_ratio.png",
+    width=23, height=20, res=300, units="cm"
 )
 contourplot(
-  male_excess ~ year * age , 
-  data=data_diff,
+  mf_ratio ~ year * age, 
+  data=subset(data_mfratio, age <=50), 
   region=T, 
-  col.regions=rev(heat.colors(200)), 
-  #  col.regions=rev(gray(0:199/199)),
-  cuts=50
-  
+  par.strip.text=list(cex=1.4, fontface="bold"),
+  ylab=list(label="Age in years", cex=1.4),
+  xlab=list(label="Year", cex=1.4),
+  cex=1.4,
+  at=1:10,
+  col.regions=colorRampPalette(brewer.pal(6, "Greys"))(200),
+  main=NULL,
+  labels=list(cex=1.2),
+  col="blue",
+  scales=list(
+    x=list(cex=1.4), 
+    y=list(cex=1.4),
+    alternating=3
+  )
 )
-
 dev.off()
 
 
@@ -341,97 +327,63 @@ r2stl(
 # g1 is the first instruction: it says use the data data_younger
 # to produce a visualisation in which the y axis depends on 
 # convict_rate and the x axis depends on age
-
-g1 <- ggplot(data_younger, aes(y=convict_rate, x=age))
-
-# g2 is g1 plus one more instruction: the colour and the type of line 
-# should both depend on the variable sex: this takes one of two values,
-# so two different line types and colours will be used
-
-g2 <- g1 + geom_line(aes(colour=sex, linetype=sex))
-# This adds another instruction: instead of a single image, produce many 
-# small multiples, showing the above separately for each year
-g3 <- g2 + facet_wrap( ~ year)
-
-# This adds a final instruction: label the y axis "convict rate"
-g4 <- g3 + labs(y="convict rate")
-
-# This command prints the image created to a graphics device. As no
-# other graphics device has been stated, the device will be rstudio's internal 
-# display
-print(g4)
+data_younger %>%
+  ggplot(data=., aes(y=convict_rate, x=age)) +
+  geom_line(aes(colour=sex, linetype=sex)) +
+  facet_wrap(~ year) +
+  labs(x="Age in years", y="Conviction rate") +
+  guides(colour=guide_legend("Sex"), linetype=guide_legend("Sex"))
 
 # This saves a copy of the graphic created above to a new file.  
 ggsave(
-  "figures/age_sections.png", width=20, height=20, unit="cm"
+  "figures/age_sections.png", 
+  width=20, height=20, dpi=300, unit="cm"
   )
-
 
 #### Cohort slides:
 
 # This creates a birth cohort variable and adds it to the data_younger dataset
-data_younger <- mutate(data_younger,
-                       cohort=year - age
-                       )
 
-#this sorts the dataset data_younger first by sex, then by cohort, then by age
-data_younger <- arrange(data_younger, sex, cohort, age)
+data_younger <- data_younger %>%
+  mutate(cohort = year - age) %>%
+  arrange(sex, cohort, age)
 
 
-# This works in a similar way to the instructions above...
-g1 <- ggplot(data_younger,
-             aes(y=convict_rate, x=age)
-             )
-g2 <- g1 + geom_line(aes(colour=sex, linetype=sex))
-g3 <- g2 + facet_wrap( ~ cohort) # .. the only difference is here. The 
-# facet is now determined by the cohort variable, rather than the year variable
-print(g3)
+data_younger %>%
+  ggplot(data=., aes(y=convict_rate, x=age)) +
+  geom_line(aes(colour=sex, linetype=sex)) +
+  facet_wrap(~ cohort)
 
-
-# Now just to look at a subset of cohort years:
-
-# This does as with the above, but using a subset of cohorts.
-g1 <- ggplot(
-  subset(data_younger,
-         subset=cohort >=1960 & cohort <= 1985)
-         ,
-             aes(y=convict_rate, x=age)
-)
-g2 <- g1 + geom_line(aes(colour=sex, linetype=sex))
-g3 <- g2 + facet_wrap( ~ cohort)
-print(g3)
+data_younger %>%
+  filter(cohort >=1960 & cohort <=1985) %>%
+  ggplot(data=., aes(y=convict_rate, x=age)) +
+  geom_line(aes(colour=sex, linetype=sex)) +
+  facet_wrap(~ cohort) +
+  labs(x="Age in years", y="Conviction rate") +
+  guides(colour=guide_legend("Sex"), linetype=guide_legend("Sex"))
 
 ggsave(
-  "figures/cohort_sub_section.png", width=25, height=20, unit="cm"
+  "figures/cohort_sub_section.png", 
+  width=25, height=20, dpi=300, unit="cm"
 )
 
 
 #### For completeness, age facets as well 
-
-g1 <- ggplot(subset(data_younger, subset=age <=35), aes(y=convict_rate, x=year))
-
-# g2 is g1 plus one more instruction: the colour and the type of line 
-# should both depend on the variable sex: this takes one of two values,
-# so two different line types and colours will be used
-
-g2 <- g1 + geom_line(aes(colour=sex, linetype=sex))
-# This adds another instruction: instead of a single image, produce many 
-# small multiples, showing the above separately for each year
-g3 <- g2 + facet_wrap( ~ age)
-
-# This adds a final instruction: label the y axis "convict rate"
-g4 <- g3 + labs(y="convict rate") + theme(
-  axis.text.x = element_text(angle =90, hjust=1, vjust=0.5)
+data_younger %>%
+  filter(age <=35) %>%
+  ggplot(data=., aes(y=convict_rate, x=year)) +
+  geom_line(aes(colour=sex, linetype=sex)) +
+  facet_wrap( ~ age) +
+  labs(x="Age in years", y="Conviction rate") +
+  guides(colour=guide_legend("Sex"), linetype=guide_legend("Sex")) +
+  theme(
+    axis.text.x = element_text(angle =90, hjust=1, vjust=0.5)
   )
 
 
-# This command prints the image created to a graphics device. As no
-# other graphics device has been stated, the device will be rstudio's internal 
-# display
-print(g4)
-
 # This saves a copy of the graphic created above to a new file.  
 ggsave(
-  "figures/age_facets.png", width=20, height=20, unit="cm"
+  "figures/age_facets.png", 
+  width=20, height=20, unit="cm", dpi=300
 )
 
