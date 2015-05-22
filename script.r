@@ -1,47 +1,27 @@
-# This first line removes and objects from the R workspace.
 rm(list=ls())
 
-# The following lines load a convenience function that someone wrote to handle
-# the installation and loading of packages
 
-source("scripts/LoadPackages.R")
+# Pre-reqs ----------------------------------------------------------------
 
-# The list of packages loaded is shown below. The most important are 
-# plyr : data management
-# lattice: used for the contour plot
-# r2stl : for producing the stl files needed for 3d visualisations
-# ggplot2 : for the other visualisations
-RequiredPackages(
-  c(
-    "plyr",
-    "reshape2",
-    "lattice",
-    "ggplot2",
-    "stringr",
-    "car",
-    "RColorBrewer",
-    "r2stl"
-  )
-)
 
+require(plyr)
+require(stringr)
 require(tidyr)
+require(dplyr)
 
-# The more usual way of doing the above is to install packages
-# using the install.packages() function
-# then load the package using the require() or library() functions
+require(RColorBrewer)
+require(ggplot2)
+require(lattice)
 
 
-# load the data
 
-# This reads in the data from the csv file from the csv file, into an object 
-# called data
-data_raw <- read.csv("data/real/scotland_all.csv")
 
-# This copies data_raw into an object called data
-data <- data_raw
+# Data --------------------------------------------------------------------
 
-# this renames the columns in data. The renamed variables are all readable but short,
-# and in lower case
+
+data <- read.csv("data/real/scotland_all.csv") %>%
+  tbl_df
+
 names(data) <- c(
   "country",
   "year",
@@ -51,35 +31,26 @@ names(data) <- c(
   "total"
   )
 
+
 # This converts the values in the sex vector to lowercase
 data$sex <- tolower(data$sex)
-
-# change 90 and over to 90 to allow conversion from factor to numeric
-
-# This turns the character string value "90 or over" into the string "90"
 data$age <- revalue(data$age, c("90 & over" = "90"))
-# This converts the convents of the age variable from factor to numeric
 data$age <- as.numeric(as.character(data$age))
-# (Because one of the values was "90 & over", it was stored as a factor
-# rather than a numeric vector)
 
-# This adds a new variable to the dataset, convict_rate,
-# which is calculated as convicted/total for each row
-data <- mutate(data, convict_rate = convicted/total)
+data <- data  %>% mutate(convict_rate = convicted/total)
 
-###
-
-# This creates a new dataset containing only observations in those aged 60 
-# years or younger
 data_younger <- data  %>% 
-  tbl_df  %>% 
   filter(age <= 60)
 
 
-###############################################################################
-#
-# This is the first image. It uses the function contourplot from the package 
-# lattice. 
+data_mfratio <- data_younger  %>% 
+  tbl_df   %>% 
+  select(-convicted, -total) %>% 
+  spread(key=sex, value=convict_rate)  %>% 
+  mutate(mf_ratio = male/female)
+
+
+# Contour plots -----------------------------------------------------------
 
 png(filename="figures/all_scotland.png", 
     width=40, height=20, res=300, units="cm"
@@ -200,18 +171,8 @@ dev.off()
 
 # this creates a subset of the data using only the variables of interest
 
-data_mfratio <- data_younger  %>% 
-  tbl_df   %>% 
-  select(-convicted, -total) %>% 
-  spread(key=sex, value=convict_rate)  %>% 
-  mutate(mf_ratio = male/female)
-
-# this re_arranges the data so that male and female convict_rates
-# are reported in different columns, called male and female
-# It uses the reshape2 package by Hadley Wickham
 
 
-# This plots male_excess as a function of year and age in a contour plot
 png("figures/mf_ratio.png",
     width=23, height=20, res=300, units="cm"
 )
@@ -237,12 +198,9 @@ contourplot(
 dev.off()
 
 
-#########################################################################################
-######## STL Images
-#########################################################################################
 
-# The subsection below is used to produce the stl format images needed for the 
-# 3d printers
+# STL files ---------------------------------------------------------------
+
 
 fn <- function(x){
   ages <- x$age
@@ -253,20 +211,20 @@ fn <- function(x){
   return(x)
 }
 
-convict_matrix_male <- recast(
-  subset(data_younger, subset=sex=="male", select=c("year", "age", "convict_rate")),
-  age ~ year,
-  id.var=c("age", "year"),
-  measure="convict_rate"
-  )
+
+convict_matrix_male <- data_younger %>%
+  filter(sex=="male") %>%
+  select(year, age, convict_rate) %>%
+  spread(key=year, value=convict_rate) 
+
 convict_matrix_male <- fn(convict_matrix_male)
 
-convict_matrix_female <- recast(
-  subset(data_younger, subset=sex=="female", select=c("year", "age", "convict_rate")),
-  age ~ year,
-  id.var=c("age", "year"),
-  measure="convict_rate"
-)
+
+convict_matrix_female <- data_younger %>%
+  filter(sex=="female") %>%
+  select(year, age, convict_rate) %>%
+  spread(key=year, value=convict_rate) 
+
 convict_matrix_female <- fn(convict_matrix_female)
 
   
@@ -312,21 +270,11 @@ r2stl(
   z.expand=T,
   show.persp=F
 )
-  
-####################################################################################
-####################################################################################
-# In this section the package ggplot2 is used to show how age-crime curves changed over
-# time
 
-# The basic idea with ggplot2 is to create visualisations by piecing together
-# a number of separate graphical instructions
 
-#
-# Age slides:
 
-# g1 is the first instruction: it says use the data data_younger
-# to produce a visualisation in which the y axis depends on 
-# convict_rate and the x axis depends on age
+# Small multiples ---------------------------------------------------------
+
 data_younger %>%
   ggplot(data=., aes(y=convict_rate, x=age)) +
   geom_line(aes(colour=sex, linetype=sex)) +
@@ -380,10 +328,59 @@ data_younger %>%
     axis.text.x = element_text(angle =90, hjust=1, vjust=0.5)
   )
 
-
 # This saves a copy of the graphic created above to a new file.  
 ggsave(
   "figures/age_facets.png", 
   width=20, height=20, unit="cm", dpi=300
 )
 
+
+# New figs ----------------------------------------------------------------
+
+
+# This figure will show changes in the shape of the age-crime curve over time
+
+data_younger  %>% 
+  select(-country)  %>% 
+  group_by(year, sex)  %>% 
+  arrange(year, sex, age)  %>% 
+  mutate(
+    rel_convict_rate = convict_rate / max(convict_rate),
+    year_group = cut(
+      year, 
+      breaks=c(1989, 1995, 2000, 2005, 2012),
+      include.lowest=T, right=T
+      )
+    ) %>%
+  ggplot(data=.) +
+  geom_line(aes(x=age, y=rel_convict_rate, group=year, colour=year_group), alpha=0.5) + 
+  facet_wrap(~ sex)  + 
+  labs(x="Age in years", y="Relative conviction rate", colour="Year range") +
+  guides(colour=guide_legend(nrow=2)) +
+  theme(legend.position="bottom")
+  
+ggsave(
+  "figures/relative_agecrime.png", 
+  width=12, height=12, unit="cm", dpi=300
+)
+
+# This figure will show changes in the scale of the age-crime curve over time
+
+data_younger  %>% 
+  select(-country)  %>% 
+  group_by(sex, year)  %>% 
+  summarise(
+    max_convict_rate =  max(convict_rate)
+  ) %>% 
+  ggplot(data=.) +
+  geom_line(aes(x=year, y=max_convict_rate)) + 
+  facet_wrap(~ sex, scales="free")  + 
+  labs(x="Year", y="Maximum age-specific \nconviction rate") +
+  theme(
+    axis.text.x = element_text(angle =90, hjust=1, vjust=0.5)
+  )
+
+ggsave(
+  "figures/max_agecrime.png", 
+  width=12, height=8, unit="cm", dpi=300
+)
