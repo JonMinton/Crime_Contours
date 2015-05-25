@@ -18,11 +18,11 @@ require(ggplot2)
 require(lattice)
 require(latticeExtra)
 
+require(r2stl)
 
 # Functions ---------------------------------------------------------------
 
 smooth <- function(input, smooth_par=2){
-  
   dta <- input %>%
     select(year, age, mf_ratio) %>%
     spread(key=age, value=mf_ratio) 
@@ -53,7 +53,14 @@ smooth <- function(input, smooth_par=2){
 }
 
 
-
+make_matrix <- function(x){
+  ages <- x$age
+  x$age <- NULL
+  x <- as.matrix(x)
+  x - min(x)
+  rownames(x) <- ages
+  return(x)
+}
 # Data --------------------------------------------------------------------
 
 
@@ -242,41 +249,70 @@ p2 <- levelplot(
 print(p2 + p1)
 dev.off()
 
-# Smooth
+# Illustration of Lexis surface -------------------------------------------
+png("figures/lexis_plot_illustration.png",
+    width=10, height=10, res=300, units="cm"
+)
+levelplot(
+  convict_rate ~ year * age, 
+  data=subset(data_younger, subset=sex=="male"), 
+  region=T, 
+  ylab=list(label="Age in years", cex=1),
+  xlab=list(label="Year", cex=1),
+  cuts=20,
+  col.regions="white",
+  main=NULL,
+  col="blue",
+  scales=list(
+    x=list(cex=1), 
+    y=list(cex=1),
+    alternating=3
+  ),
+  colorkey=FALSE,
+  panel=function(x,y, ...){
+    panel.abline(v=seq(1990, 2010, by=5), col="red", lwd=2)
+    panel.abline(h=seq(20, 60, by=5), col="green")
+
+    panel.abline(a=-1935, b=1, col="blue", lty="dashed")
+    panel.abline(a=-1940, b=1, col="blue", lty="dashed")
+    panel.abline(a=-1945, b=1, col="blue", lty="dashed")
+    panel.abline(a=-1950, b=1, col="blue", lty="dashed")
+    panel.abline(a=-1955, b=1, col="blue", lty="dashed")
+    panel.abline(a=-1960, b=1, col="blue", lty="dashed")
+    panel.abline(a=-1965, b=1, col="blue", lty="dashed")
+    panel.abline(a=-1970, b=1, col="blue", lty="dashed")
+    panel.abline(a=-1975, b=1, col="blue", lty="dashed")
+    panel.abline(a=-1980, b=1, col="blue", lty="dashed")
+    panel.abline(a=-1985, b=1, col="blue", lty="dashed")  
+    panel.abline(a=-1990, b=1, col="blue", lty="dashed")     
+  }
+)
+dev.off()
 
 # STL files ---------------------------------------------------------------
 
 
-fn <- function(x){
-  ages <- x$age
-  x$age <- NULL
-  x <- as.matrix(x)
-  x - min(x)
-  rownames(x) <- ages
-  return(x)
-}
 
 
 convict_matrix_male <- data_younger %>%
   filter(sex=="male") %>%
   select(year, age, convict_rate) %>%
-  spread(key=year, value=convict_rate) 
-
-convict_matrix_male <- fn(convict_matrix_male)
+  spread(key=year, value=convict_rate) %>%
+  make_matrix
 
 
 convict_matrix_female <- data_younger %>%
   filter(sex=="female") %>%
   select(year, age, convict_rate) %>%
-  spread(key=year, value=convict_rate) 
+  spread(key=year, value=convict_rate) %>%
+  make_matrix
 
-convict_matrix_female <- fn(convict_matrix_female)
+# Add 2 % to all values
 
-  
-  r2stl(
+r2stl(
     x=as.numeric(rownames(convict_matrix_male)),
     y=as.numeric(colnames(convict_matrix_male)),
-    z=convict_matrix_male,
+    z=convict_matrix_male + max(convict_matrix_male) * 0.02,
     
     filename="stl/scot_younger_male.stl",
     z.expand=T,
@@ -286,7 +322,7 @@ convict_matrix_female <- fn(convict_matrix_female)
 r2stl(
   x=as.numeric(rownames(convict_matrix_female)),
   y=as.numeric(colnames(convict_matrix_female)),
-  z=convict_matrix_female,
+  z=convict_matrix_female + max(convict_matrix_male) * 0.02,
   
   filename="stl/scot_younger_female.stl",
   z.expand=T,
@@ -309,7 +345,7 @@ colnames(convict_matrix_both) <- 1:dim(convict_matrix_both)[2]
 r2stl(
   x=as.numeric(rownames(convict_matrix_both)),
   y=as.numeric(colnames(convict_matrix_both)),
-  z=convict_matrix_both,
+  z=convict_matrix_both + max(convict_matrix_both) * 0.02,
   
   filename="stl/scot_younger_both_gender.stl",
   z.expand=T,
