@@ -9,6 +9,10 @@ require(stringr)
 require(tidyr)
 require(dplyr)
 
+# for smoothing
+require(fields) 
+require(spatstat)
+
 require(RColorBrewer)
 require(ggplot2)
 require(lattice)
@@ -116,7 +120,7 @@ png(filename="figures/male_scot_younger.png",
 )
 # Let's look at the mort rates only
 contourplot(
-  convict_rate ~ year * age | sex, 
+  convict_rate ~ year * age, 
   data=subset(data_younger, subset=sex=="male"), 
   region=T, 
   par.strip.text=list(cex=1.4, fontface="bold"),
@@ -142,7 +146,7 @@ png(filename="figures/female_scot_younger.png",
 )
 # Let's look at the mort rates only
 contourplot(
-  convict_rate ~ year * age | sex, 
+  convict_rate ~ year * age, 
   data=subset(data_younger, subset=sex=="female"), 
   region=T, 
   par.strip.text=list(cex=1.4, fontface="bold"),
@@ -178,7 +182,8 @@ png("figures/mf_ratio.png",
 )
 contourplot(
   mf_ratio ~ year * age, 
-  data=subset(data_mfratio, age <=50), 
+#  data=subset(data_mfratio, age <=50), 
+  data=subset(mf_ratio_blurred, age <=50),
   region=T, 
   par.strip.text=list(cex=1.4, fontface="bold"),
   ylab=list(label="Age in years", cex=1.4),
@@ -197,8 +202,40 @@ contourplot(
 )
 dev.off()
 
+# Smooth
 
+fn <- function(input, smooth_par=2){
+  
+  dta <- input %>%
+    select(year, age, mf_ratio) %>%
+    spread(key=age, value=mf_ratio) 
+  ages <- names(dta)[-1]
+  years <- dta$year
+  dta$year <- NULL
+  dta <- as.matrix(dta)
+  rownames(dta) <- years
+  colnames(dta) <- ages
+  dta[is.infinite(dta) & dta < 0] <- min(dta[is.finite(dta)]) # correct for infinities
+  dta[is.infinite(dta) & dta > 0] <- max(dta[is.finite(dta)])
+  dta_blurred <- as.matrix(blur(as.im(dta), sigma=smooth_par))  
+  rownames(dta_blurred) <- rownames(dta)
+  colnames(dta_blurred) <- colnames(dta)
+  output <- data.frame(
+    year=years, 
+    dta_blurred
+  )
+  output <- output %>%
+    gather(key=age, value=mf_ratio, -year)
+  
+  output$age <- output$age %>%
+    str_replace("X", "") %>%
+    as.character %>%
+    as.numeric
+  
+  return(output)
+}
 
+mf_ratio_blurred <- fn(data_mfratio, smooth_par=1.5)
 # STL files ---------------------------------------------------------------
 
 
