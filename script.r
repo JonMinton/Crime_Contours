@@ -565,3 +565,37 @@ ggsave(
   "figures/max_agecrime_cohort.png", 
   width=12, height=8, unit="cm", dpi=300
 )
+
+
+
+# Nonlinear least squares regression on Gamma density function ------------
+
+# Formula is 
+
+# ((bta^-alpha) / gamma(alpha)) * (I(age - min(age)) ^ (alpha - 1)) * exp(-(1/bta) * I(age - min(age)))
+# try with a single year's data
+tmp <- data_younger %>%
+  filter(year == 1989 & sex=="female") %>%
+  nls(
+    formula = convict_rate ~ ((bta^-alpha) / gamma(alpha)) * (I(age - min(age)) ^ (alpha - 1)) * exp(-(1/bta) * I(age - min(age))),
+    data=.,
+    algorithm="port",
+    start=list(bta=1, alpha=10),
+    lower=list(bta=0.01,alpha=0.01),
+    trace=T
+    )
+
+preds <- function(age, alpha, beta){
+  convict_rate = ((beta^-alpha) / gamma(alpha)) * 
+    (age - min(age)) ^ (alpha - 1) * 
+    exp(-(1/beta) * (age - min(age)))
+  return(convict_rate)
+}
+
+tmp <- data_younger %>%
+  filter(year == 1989 & sex =="female") %>%
+  glm(convict_rate ~ I(age - min(age)), 
+      data=.,
+      family=Gamma(link="identity")
+      )
+
