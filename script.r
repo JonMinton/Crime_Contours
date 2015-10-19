@@ -4,27 +4,22 @@ rm(list=ls())
 # The following lines load a convenience function that someone wrote to handle
 # the installation and loading of packages
 
-source("scripts/LoadPackages.R")
-
 # The list of packages loaded is shown below. The most important are 
 # plyr : data management
 # lattice: used for the contour plot
 # r2stl : for producing the stl files needed for 3d visualisations
 # ggplot2 : for the other visualisations
-RequiredPackages(
-  c(
-    "plyr",
-    "reshape2",
-    "lattice",
-    "ggplot2",
-    "stringr",
-    "car",
-    "RColorBrewer",
-    "r2stl"
-  )
-)
 
+require(plyr)
+require(stringr)
 require(tidyr)
+require(dplyr)
+
+require(r2stl)
+require(lattice)
+require(ggplot2)
+require(RColorBrewer)
+
 
 # The more usual way of doing the above is to install packages
 # using the install.packages() function
@@ -386,4 +381,39 @@ ggsave(
   "figures/age_facets.png", 
   width=20, height=20, unit="cm", dpi=300
 )
+
+
+#
+
+# Relative age crime-curves by year -------------------------------------
+
+data_younger  %>% 
+  filter(year %in% c(1990, 1995, 2000, 2005, 2010))  %>% 
+  group_by(year, sex)  %>% 
+  mutate(r_rate = convict_rate/ max(convict_rate))  %>% 
+  ggplot(data=.) + 
+  geom_line(
+    aes(
+      x=age, 
+      y=r_rate, 
+      group=factor(year), 
+      colour=factor(year)
+    )
+  ) + 
+  facet_grid(~sex)
+
+
+data_younger  %>% 
+  group_by(year, sex)  %>% 
+  summarise(mval=max(convict_rate))  %>% 
+  ggplot(data=.) + 
+  geom_line(aes(x=year, y=mval, group=sex, colour=sex, linetype=sex))
+
+
+data_younger  %>% 
+  group_by(year, sex)  %>% 
+  summarise(mval=max(convict_rate))  %>% 
+  ggplot(data=.) + 
+  geom_line(aes(x=year, y=mval)) + 
+  facet_wrap(~sex, scales = "free")
 
