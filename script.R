@@ -434,6 +434,10 @@ data %>% group_by(year) %>%
   ylim(x = 30000, y = 65000) + 
   labs(x = "Year", y = "Total number of people convicted")
 
+ggsave(
+  "figures/total_convictions_per_year.png", 
+  width=15, height=15, unit="cm", dpi=300
+)
 
 
 
