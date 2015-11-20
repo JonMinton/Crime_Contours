@@ -390,7 +390,7 @@ ggsave(
 # Relative age crime-curves by year -------------------------------------
 
 data_younger  %>% 
-  filter(year %in% c(1990, 1995, 2000, 2005, 2010))  %>% 
+  filter(year %in% c(1989, 1995, 2000, 2005, 2011))  %>% 
   group_by(year, sex)  %>% 
   mutate(r_rate = convict_rate/ max(convict_rate))  %>% 
   ggplot(data=.) + 
@@ -402,7 +402,14 @@ data_younger  %>%
       colour=factor(year)
     )
   ) + 
-  facet_grid(~sex)
+  facet_grid(~sex) +
+  labs(y = "Relative conviction rate", x = "Age in years") +
+  scale_colour_discrete( name ="Year")
+
+ggsave("figures/relative_age_crime.png", 
+       width = 15, height = 10, units = "cm", dpi = 300)
+
+
 
 
 data_younger  %>% 
