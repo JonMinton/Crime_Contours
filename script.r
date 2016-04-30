@@ -620,6 +620,7 @@ lm(prop_convicted ~ year, model_data) %>% AIC() -> a_year
 lm(prop_convicted ~ sex, model_data) %>% AIC() -> a_sex
 lm(prop_convicted ~ age, model_data) %>% AIC() -> a_age
 
+
 # Of these three simplest models, the age model has the lowest AIC
 
 # Now two way linear models
@@ -627,12 +628,16 @@ lm(prop_convicted ~ age, model_data) %>% AIC() -> a_age
 lm(prop_convicted ~ age + year, model_data) %>% AIC() -> a_age_year
 lm(prop_convicted ~ age + sex, model_data) %>% AIC() -> a_age_sex
 
+lm(prop_convicted ~ age + year, model_data) %>% BIC() -> b_age_year
+lm(prop_convicted ~ age + sex, model_data) %>% BIC() -> b_age_sex
+
 # of these two, age + sex beats age + year
 
 # But we know age does not have a linear effect - how many polynomials 
 # is appropriate?
 
 # without sex interaction
+lm(prop_convicted ~ poly(age,1)  + sex, model_data) %>% AIC() -> a_age1_sex
 lm(prop_convicted ~ poly(age,2)  + sex, model_data) %>% AIC() -> a_age2_sex
 lm(prop_convicted ~ poly(age,3)  + sex, model_data) %>% AIC() -> a_age3_sex
 lm(prop_convicted ~ poly(age,4)  + sex, model_data) %>% AIC() -> a_age4_sex
@@ -643,6 +648,19 @@ lm(prop_convicted ~ poly(age,8)  + sex, model_data) %>% AIC() -> a_age8_sex
 lm(prop_convicted ~ poly(age,9)  + sex, model_data) %>% AIC() -> a_age9_sex
 lm(prop_convicted ~ poly(age,10)  + sex, model_data) %>% AIC() -> a_age10_sex
 
+lm(prop_convicted ~ poly(age,1)  + sex, model_data) %>% BIC() -> b_age1_sex
+lm(prop_convicted ~ poly(age,2)  + sex, model_data) %>% BIC() -> b_age2_sex
+lm(prop_convicted ~ poly(age,3)  + sex, model_data) %>% BIC() -> b_age3_sex
+lm(prop_convicted ~ poly(age,4)  + sex, model_data) %>% BIC() -> b_age4_sex
+lm(prop_convicted ~ poly(age,5)  + sex, model_data) %>% BIC() -> b_age5_sex
+lm(prop_convicted ~ poly(age,6)  + sex, model_data) %>% BIC() -> b_age6_sex
+lm(prop_convicted ~ poly(age,7)  + sex, model_data) %>% BIC() -> b_age7_sex
+lm(prop_convicted ~ poly(age,8)  + sex, model_data) %>% BIC() -> b_age8_sex
+lm(prop_convicted ~ poly(age,9)  + sex, model_data) %>% BIC() -> b_age9_sex
+lm(prop_convicted ~ poly(age,10)  + sex, model_data) %>% BIC() -> b_age10_sex
+
+
+# with sex interaction
 lm(prop_convicted ~ poly(age,1)  * sex, model_data) %>% AIC() -> a_age1sex
 lm(prop_convicted ~ poly(age,2)  * sex, model_data) %>% AIC() -> a_age2sex
 lm(prop_convicted ~ poly(age,3)  * sex, model_data) %>% AIC() -> a_age3sex
@@ -654,20 +672,38 @@ lm(prop_convicted ~ poly(age,8)  * sex, model_data) %>% AIC() -> a_age8sex
 lm(prop_convicted ~ poly(age,9)  * sex, model_data) %>% AIC() -> a_age9sex
 lm(prop_convicted ~ poly(age,10)  * sex, model_data) %>% AIC() -> a_age10sex
 
+lm(prop_convicted ~ poly(age,1)  * sex, model_data) %>% BIC() -> b_age1sex
+lm(prop_convicted ~ poly(age,2)  * sex, model_data) %>% BIC() -> b_age2sex
+lm(prop_convicted ~ poly(age,3)  * sex, model_data) %>% BIC() -> b_age3sex
+lm(prop_convicted ~ poly(age,4)  * sex, model_data) %>% BIC() -> b_age4sex
+lm(prop_convicted ~ poly(age,5)  * sex, model_data) %>% BIC() -> b_age5sex
+lm(prop_convicted ~ poly(age,6)  * sex, model_data) %>% BIC() -> b_age6sex
+lm(prop_convicted ~ poly(age,7)  * sex, model_data) %>% BIC() -> b_age7sex
+lm(prop_convicted ~ poly(age,8)  * sex, model_data) %>% BIC() -> b_age8sex
+lm(prop_convicted ~ poly(age,9)  * sex, model_data) %>% BIC() -> b_age9sex
+lm(prop_convicted ~ poly(age,10)  * sex, model_data) %>% BIC() -> b_age10sex
+
 
 tmp <- data.frame(poly = 1:10, 
                   interaction = rep(c(F, T), each = 10),
-                  aic = 
+                  model = rep(c("aic", "bic"), each = 20),
+                  fit = 
                     c(
-      a_age_sex, a_age2_sex, a_age3_sex, a_age4_sex, a_age5_sex,
-      a_age6_sex, a_age7_sex, a_age8_sex, a_age9_sex, a_age10_sex,
+      a_age1_sex, a_age2_sex, a_age3_sex, a_age4_sex, a_age5_sex,
+      a_age6_sex, a_age7_sex, a_age8_sex, a_age9_sex, a_age10_sex,                
       a_age1sex, a_age2sex, a_age3sex, a_age4sex, a_age5sex,
-      a_age6sex, a_age7sex, a_age8sex, a_age9sex, a_age10sex
+      a_age6sex, a_age7sex, a_age8sex, a_age9sex, a_age10sex,
+      b_age1_sex, b_age2_sex, b_age3_sex, b_age4_sex, b_age5_sex,
+      b_age6_sex, b_age7_sex, b_age8_sex, b_age9_sex, b_age10_sex,
+      b_age1sex, b_age2sex, b_age3sex, b_age4sex, b_age5sex,
+      b_age6sex, b_age7sex, b_age8sex, b_age9sex, b_age10sex
+      
       
                       )
       )
 
-qplot(x = as.factor(poly), y = aic, group = interaction, colour = interaction, data = tmp)
+qplot(x = as.factor(poly), y = fit, group = interaction, colour = interaction, data = tmp) +
+  facet_wrap(~model)
 
 
 best_invariant_model <- lm(prop_convicted ~ poly(age,3)  * sex, model_data) 
