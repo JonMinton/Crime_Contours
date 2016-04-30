@@ -1,4 +1,3 @@
-
 rm(list=ls())
 
 
@@ -10,63 +9,15 @@ require(stringr)
 require(tidyr)
 require(dplyr)
 
-# for smoothing
-require(fields) 
-require(spatstat)
 
 require(RColorBrewer)
 require(ggplot2)
-require(lattice)
-require(latticeExtra)
 
-require(r2stl)
-
-# Functions ---------------------------------------------------------------
-
-smooth <- function(input, smooth_par=2){
-  dta <- input %>%
-  select(year, age, mf_ratio) %>%
-  spread(key=age, value=mf_ratio) 
-  ages <- names(dta)[-1]
-  years <- dta$year
-  dta$year <- NULL
-  dta <- as.matrix(dta)
-  rownames(dta) <- years
-  colnames(dta) <- ages
-  dta[is.infinite(dta) & dta < 0] <- min(dta[is.finite(dta)]) # correct for infinities
-  dta[is.infinite(dta) & dta > 0] <- max(dta[is.finite(dta)])
-  dta_blurred <- as.matrix(blur(as.im(dta), sigma=smooth_par))  
-  rownames(dta_blurred) <- rownames(dta)
-  colnames(dta_blurred) <- colnames(dta)
-  output <- data.frame(
-    year=years, 
-    dta_blurred
-  )
-  output <- output %>%
-  gather(key=age, value=mf_ratio, -year)
-  
-  output$age <- output$age %>%
-  str_replace("X", "") %>%
-  as.character %>%
-  as.numeric
-  
-  return(output)
-}
-
-
-make_matrix <- function(x){
-  ages <- x$age
-  x$age <- NULL
-  x <- as.matrix(x)
-  x - min(x)
-  rownames(x) <- ages
-  return(x)
-}
 # Data --------------------------------------------------------------------
 
 
 data <- read.csv("data/real/scotland_all.csv") %>%
-tbl_df
+  tbl_df
 
 names(data) <- c(
   "country",
