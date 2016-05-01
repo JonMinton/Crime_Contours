@@ -1,22 +1,22 @@
 rm(list=ls())
 
 
-# Pre-reqs ----------------------------------------------------------------
+#Pre-reqs ----------------------------------------------------------------
 
 
-require(plyr)
-require(stringr)
-require(tidyr)
-require(dplyr)
+library(plyr)
+library(stringr)
+library(tidyr)
+library(dplyr)
 
 
-require(RColorBrewer)
-require(ggplot2)
+library(RColorBrewer)
+library(ggplot2)
 
 # Data --------------------------------------------------------------------
 
 
-data <- read.csv("data/real/scotland_all.csv") %>%
+data <- read.csv("/data/real/scotland_all.csv") %>%
   tbl_df
 
 names(data) <- c(
@@ -41,14 +41,14 @@ data$age <- as.numeric(as.character(data$age))
 
 data
 
-# Interested in proportion of convictions 'owned' 
-# by any particular group in any year 
+# Interested in proportion of convictions 'owned'
+# by any particular group in any year
 
-model_data <- data %>% 
-group_by(year) %>% 
-mutate(prop_convicted = convicted / sum(convicted)) %>%
-select(year, age, sex, prop_convicted) %>%
-arrange(year, sex, age)
+model_data <- data %>%
+  group_by(year) %>%
+  mutate(prop_convicted = convicted / sum(convicted)) %>%
+  select(year, age, sex, prop_convicted) %>%
+  arrange(year, sex, age)
 
 
 lm(prop_convicted ~ year, model_data) %>% AIC() -> a_year
@@ -68,7 +68,7 @@ lm(prop_convicted ~ age + sex, model_data) %>% BIC() -> b_age_sex
 
 # of these two, age + sex beats age + year
 
-# But we know age does not have a linear effect - how many polynomials 
+# But we know age does not have a linear effect - how many polynomials
 # is appropriate?
 
 # without sex interaction
@@ -119,52 +119,50 @@ lm(prop_convicted ~ poly(age,9)  * sex, model_data) %>% BIC() -> b_age9sex
 lm(prop_convicted ~ poly(age,10)  * sex, model_data) %>% BIC() -> b_age10sex
 
 
-tmp <- data.frame(poly = 1:10, 
+tmp <- data.frame(poly = 1:10,
                   interaction = rep(c(F, T), each = 10),
                   model = rep(c("aic", "bic"), each = 20),
-                  fit = 
+                  fit =
                     c(
                       a_age1_sex, a_age2_sex, a_age3_sex, a_age4_sex, a_age5_sex,
-                      a_age6_sex, a_age7_sex, a_age8_sex, a_age9_sex, a_age10_sex,                
+                      a_age6_sex, a_age7_sex, a_age8_sex, a_age9_sex, a_age10_sex,
                       a_age1sex, a_age2sex, a_age3sex, a_age4sex, a_age5sex,
                       a_age6sex, a_age7sex, a_age8sex, a_age9sex, a_age10sex,
                       b_age1_sex, b_age2_sex, b_age3_sex, b_age4_sex, b_age5_sex,
                       b_age6_sex, b_age7_sex, b_age8_sex, b_age9_sex, b_age10_sex,
                       b_age1sex, b_age2sex, b_age3sex, b_age4sex, b_age5sex,
                       b_age6sex, b_age7sex, b_age8sex, b_age9sex, b_age10sex
-                      
-                      
+
+
                     )
 )
 
-qplot(x = as.factor(poly), y = fit, group = interaction, colour = interaction, data = tmp) +
-  facet_wrap(~model)
+qplot(x = as.factor(poly), y = fit, group = interaction, colour = interaction, shape = model, data = tmp)
 
 
-best_invariant_model <- lm(prop_convicted ~ poly(age,3)  * sex, model_data) 
+best_invariant_model <- lm(prop_convicted ~ poly(age,3)  * sex, model_data)
 
-?update
 
 model_with_year <- update(best_invariant_model, . ~ . + I(year - 1989))
 
-model_interrupted_complex <- model_data %>% 
-ungroup() %>% 
+model_interrupted_complex <- model_data %>%
+ungroup() %>%
 mutate(year2 = year - 1989) %>%
-mutate(year3 = ifelse(year - 2000 < 0, 0, year - 2000)) %>% 
+mutate(year3 = ifelse(year - 2000 < 0, 0, year - 2000)) %>%
 lm(prop_convicted ~ poly(age,3)  * sex + year2 + year3, data = .)
 
 
 
-model_interrupted_interracted <- model_data %>% 
-ungroup() %>% 
+model_interrupted_interracted <- model_data %>%
+ungroup() %>%
 mutate(year2 = year - min(year)) %>%
-mutate(post_drop = ifelse(year >= 2000, TRUE, FALSE)) %>% 
+mutate(post_drop = ifelse(year >= 2000, TRUE, FALSE)) %>%
 lm(prop_convicted ~ poly(age,3)  * sex * post_drop, data = .)
 
-model_yearandinterrupted_interracted <- model_data %>% 
-ungroup() %>% 
+model_yearandinterrupted_interracted <- model_data %>%
+ungroup() %>%
 mutate(year2 = year - min(year)) %>%
-mutate(year3 = ifelse(year >= 2000, year - 2000, 0)) %>% 
+mutate(year3 = ifelse(year >= 2000, year - 2000, 0)) %>%
 lm(prop_convicted ~ (poly(age,3)  * sex )* (year2 + year3), data = .)
 
 

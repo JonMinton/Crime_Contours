@@ -1,0 +1,311 @@
+---
+title: "Comparison of models"
+author: "Jon Minton"
+date: "30 April 2016"
+output: html_document
+---
+
+## Introduction
+
+This document will compare a series of models which predict the share of all convictions, in any given year, committed by different age/sex groups. Firsly, a series of models are developed which predict the share of convictions in any given year given age and sex only. The best of these models will be our reference 'best time invariant' model, and will be a formal representation of the age-crime (gender) curve. 
+
+The hypothesis that the age crime curve is not invariant will be formally assessed by exploring whether meaningful improvements in the model fit can be achieved by including period-based terms which interact with age terms. 
+
+
+
+
+```{r setup, echo = F}
+rm(list=ls())
+# Code chunk example from http://stackoverflow.com/questions/24585254/working-with-knitr-using-subdirectories
+library(knitr)
+opts_knit$set(root.dir=normalizePath('../'))
+
+
+library(plyr)
+library(stringr)
+library(tidyr)
+library(dplyr)
+
+
+library(RColorBrewer)
+library(ggplot2)
+```
+
+Now to load and set up the data 
+
+```{r load_data}
+data <- read.csv("data/real/scotland_all.csv") %>%
+  tbl_df
+
+names(data) <- c(
+  "country",
+  "year",
+  "age",
+  "sex",
+  "convicted",
+  "total"
+)
+
+data$sex <- tolower(data$sex)
+data$age <- revalue(data$age, c("90 & over" = "90"))
+data$age <- as.numeric(as.character(data$age))
+
+
+```
+
+
+We first want to see what the data look like
+
+```{r}
+
+print(data)
+```
+
+As we are interested primarily in whether the shape of the age-crime curve has changed over time, we calculate for each year the proportion of all convictions associated with each age/sex combination
+
+```{r}
+
+model_data <- data %>%
+  group_by(year) %>%
+  mutate(prop_convicted = convicted / sum(convicted)) %>%
+  select(year, age, sex, prop_convicted) %>%
+  arrange(year, sex, age)
+
+model_data
+```
+
+We now start to fit an increasingly complicated series of linear regression models which regression the proportion convicted against other terms. For each of these, we extract the AIC, a measure of model fit penalised by model complexity (i.e. number of terms), and save these AIC scores as a new output.
+
+```{r}
+lm(prop_convicted ~ year, model_data) %>% AIC() -> a_year
+lm(prop_convicted ~ sex, model_data) %>% AIC() -> a_sex
+lm(prop_convicted ~ age, model_data) %>% AIC() -> a_age
+
+c(a_year, a_sex, a_age)
+
+```
+
+Of these three simplest models, the age model has the lowest AIC, even though the sex model involves fewer parameters. All further models therefore contain age at the very least. 
+
+We now look at models containing age + at least one other set of terms. To start with, we look at adding additional terms without interactions.
+
+```{r}
+
+lm(prop_convicted ~ age + year, model_data) %>% AIC() -> a_age_year
+lm(prop_convicted ~ age + sex, model_data) %>% AIC() -> a_age_sex
+
+c(a_age_year, a_age_sex)
+
+```
+Of these two models, age + sex beats age + year, so all further models will now contain age  and sex at a minimum. 
+
+An important feature of the age-crime curve is its skewednes/nonlinearity. To represent this as terms in a linear regression model we will look at adding varying numbers of polynomials to the model. We compare between 1 and 10 polynomials as follows:
+
+Firstly, we look at models which include between 1 and 10 polynomials of age, along with sex, but without interactions between them: 
+
+```{r}
+
+lm(prop_convicted ~ poly(age,1)  + sex, model_data) %>% AIC() -> a_age1_sex
+lm(prop_convicted ~ poly(age,2)  + sex, model_data) %>% AIC() -> a_age2_sex
+lm(prop_convicted ~ poly(age,3)  + sex, model_data) %>% AIC() -> a_age3_sex
+lm(prop_convicted ~ poly(age,4)  + sex, model_data) %>% AIC() -> a_age4_sex
+lm(prop_convicted ~ poly(age,5)  + sex, model_data) %>% AIC() -> a_age5_sex
+lm(prop_convicted ~ poly(age,6)  + sex, model_data) %>% AIC() -> a_age6_sex
+lm(prop_convicted ~ poly(age,7)  + sex, model_data) %>% AIC() -> a_age7_sex
+lm(prop_convicted ~ poly(age,8)  + sex, model_data) %>% AIC() -> a_age8_sex
+lm(prop_convicted ~ poly(age,9)  + sex, model_data) %>% AIC() -> a_age9_sex
+lm(prop_convicted ~ poly(age,10)  + sex, model_data) %>% AIC() -> a_age10_sex
+
+```
+
+Next, we will produce a series of models, from which we extract the AIC, containing interactions between each of the age polynomials and sex. This means that the schedule of relative propensity to conviction and age is allowed to be different for males and females.
+
+```{r}
+lm(prop_convicted ~ poly(age,1)  * sex, model_data) %>% AIC() -> a_age1sex
+lm(prop_convicted ~ poly(age,2)  * sex, model_data) %>% AIC() -> a_age2sex
+lm(prop_convicted ~ poly(age,3)  * sex, model_data) %>% AIC() -> a_age3sex
+lm(prop_convicted ~ poly(age,4)  * sex, model_data) %>% AIC() -> a_age4sex
+lm(prop_convicted ~ poly(age,5)  * sex, model_data) %>% AIC() -> a_age5sex
+lm(prop_convicted ~ poly(age,6)  * sex, model_data) %>% AIC() -> a_age6sex
+lm(prop_convicted ~ poly(age,7)  * sex, model_data) %>% AIC() -> a_age7sex
+lm(prop_convicted ~ poly(age,8)  * sex, model_data) %>% AIC() -> a_age8sex
+lm(prop_convicted ~ poly(age,9)  * sex, model_data) %>% AIC() -> a_age9sex
+lm(prop_convicted ~ poly(age,10)  * sex, model_data) %>% AIC() -> a_age10sex
+
+``` 
+
+As this has produced a lot of model fits to compare against each other, and we want to understand better the relationship between the number of polynomials and the quality of the model fit, we package the AIC values together in a dataframe to visualise the results better
+
+```{r}
+
+tmp <- data.frame(poly = 1:10,
+                  interaction = rep(c(F, T), each = 10),
+                  aic =
+                    c(
+                      a_age1_sex, a_age2_sex, a_age3_sex, a_age4_sex, a_age5_sex,
+                      a_age6_sex, a_age7_sex, a_age8_sex, a_age9_sex, a_age10_sex,
+                      a_age1sex, a_age2sex, a_age3sex, a_age4sex, a_age5sex,
+                      a_age6sex, a_age7sex, a_age8sex, a_age9sex, a_age10sex
+
+
+
+                    )
+)
+
+
+```
+
+We can now produce a plot showing this relationship as follows
+
+```{r}
+qplot(x = as.factor(poly), y = aic, group = interaction, colour = interaction, data = tmp) + 
+  geom_line()
+
+```
+
+From this we can conclude firstly that the models with interactions between age and sex tend to greatly outperform the non-interaction models, and so interactions should be included. 
+We can conclude secondly that penalised model fit continues to improve with each additional polynomial added. However, most of the improvement in fit comes only from the first three polynomials: age, age squared, and age cubed. Although lower AIC is better, slightly simpler models tend to be a bit easier to interpret, and so as a compromise we select the model with interactions and a third order polynomial as our best model to represent the hypothesis that the age-crime curve is time-invariant.
+
+For now, let's look at some summary statistics for the third order model with sex interactions.
+
+```{r}
+best_invariant_model <- lm(prop_convicted ~ poly(age,3)  * sex, model_data)
+summary(best_invariant_model)
+```
+We can see that almost all of the terms here are extremely statistically significant, with only the third order polynomial on age for females not significant at p < 0.05. Importantly, we can see that the multiple R-squared and adjusted R-squared scores are very high: around 0.96. This necessarily means that the absolute improvement in fit of a model which allows the age schedule to vary with age will time, compared to the time-invarient model, will necessarily be very small. However, the improvement in fit could still be worth it, as evaluated using something like AIC.
+
+## Building time varying alternative models
+
+We are not interested in models that simply add period variables as extra variables. Instead, we are interested in models in which period is allowed to influence the polynomials of age against annual conviction share, i.e. is interacted with each of these terms. Two alternative specifications for doing this are produced below. 
+
+In the first, period is included as a simple dummy variable: 1 for year 2000 onwards, 0 otherwise. This is to represent the idea that the crime drop began in the 2000s, and before that the age-crime curve was invariant. 
+
+In the second model, time since 1989 (start of the time series) is added, meaning that it is assumed the level of change in the shape of the age-crime curve is constant throughout the time period. Again, this is of course a gross simplification. 
+
+In the third model, time since 1989 (start of the time series) and time since 2000 (start of the supposed age-crime drop) are each allowed to interact with the other age/sex variables. This allows for the rate of change in the shape of the curve to be different after 2000 compared with before it. This third model in some ways could be seen as a hybrid of the first two models: the first which assumes a discrete change after 2000, the second which assumes a constant change in the shape over time. However, many alternative model specifications could be produced.  
+
+
+```{r}
+
+
+time_varying_interrupted_model <- model_data %>%
+  ungroup() %>%
+  mutate(year2 = year - min(year)) %>%
+  mutate(post_drop = ifelse(year >= 2000, TRUE, FALSE)) %>%
+  lm(prop_convicted ~ poly(age,3)  * sex * post_drop, data = .)
+
+time_varying_constant_change_model <- model_data %>%
+  ungroup() %>%
+  mutate(year2 = year - min(year)) %>%
+  lm(prop_convicted ~ poly(age,3)  * sex * year2, data = .)
+
+
+time_varying_hybrid_model <- model_data %>%
+  ungroup() %>%
+  mutate(year2 = year - min(year)) %>%
+  mutate(year3 = ifelse(year >= 2000, year - 2000, 0)) %>%
+  lm(prop_convicted ~ (poly(age,3)  * sex )* (year2 + year3), data = .)
+
+```
+
+## Comparing models 
+
+We now have four models: our 'best' time-invariant model with third order polynomials of age interacted with sex; and three models of increasinging complexity which allow the shape of the age-crime curve to change over time. We also know that the time-invariant model has a very impressive fit with the empirical data, with an R-squared of 0.96, but that of course there is still room for improvement. 
+
+We begin by comparing the AIC of all four models against each other
+
+```{r}
+AIC(
+  best_invariant_model,
+  time_varying_interrupted_model,
+  time_varying_constant_change_model,
+  time_varying_hybrid_model
+  )
+
+```
+
+
+Each of these time-varying models has a better penalised model fit than the time-invariant model. However, the models which allow the the age-crime curve shape to change linearly over time outperform the second model, in which the period is split into two simple periods (2000 and beyond; before 2000). Despite eight more parameters, the hybrid model still has a better penalised model fit, using AIC, than the constant change model. However, there are different parameters for penalising model complexity, and if each additional parameter were penalised more severely then the 'best' model may be different. BIC, an alternative to AIC, penalises additional parameters at a rate of log(n) per additional parameter, where n is the number of observations in the dataset. For this dataset that equates to `r round(log(nrow(model_data)), 1)` points per parameter, compared with 2 points per parameter for AIC. Therefore, it penalises more complex models more severely. Comparing BIC for the four above models gives the following:
+
+```{r}
+BIC(
+  best_invariant_model,
+  time_varying_interrupted_model,
+  time_varying_constant_change_model,
+  time_varying_hybrid_model
+  )
+
+```
+
+We see here that BIC suggests the constant-change rather than the hybrid model is the best model to use. For completeness, and equivalence with the approach taken with polynomials of age, we might also wish to produce a series of models of polynomials of year. Some of these models are likely to contain many parameters, and because the model is already quite complex we will only consider up to five parameters. 
+
+```{r}
+
+tmp <- model_data %>% ungroup() %>% mutate(year2 = year - min(year)) 
+
+t1_model <- lm(prop_convicted ~ poly(age,3)  * sex * poly(year2, 1), tmp)
+t2_model <- lm(prop_convicted ~ poly(age,3)  * sex * poly(year2, 2), tmp)
+t3_model <- lm(prop_convicted ~ poly(age,3)  * sex * poly(year2, 3), tmp)
+t4_model <- lm(prop_convicted ~ poly(age,3)  * sex * poly(year2, 4), tmp)
+t5_model <- lm(prop_convicted ~ poly(age,3)  * sex * poly(year2, 5), tmp)
+
+AIC(best_invariant_model, t1_model, t2_model, t3_model, t4_model, t5_model)
+BIC(best_invariant_model, t1_model, t2_model, t3_model, t4_model, t5_model)
+
+```
+Both AIC and BIC suggest a third order polynomial of age interacted with a third order polynomial of year since start of series (and sex) produces the best compromise between model fit and model complexity. Let's now look at some of the summary statistics for this third order polynomial model, as well as the t1_model introduced earlier.
+
+```{r}
+
+summary(t1_model)
+
+summary(t3_model)
+
+```
+ Although the third order polynomial of year model has slightly better R-squared and adjusted R-squared than the first order version, the improvement in fit is marginal: with Multiple R-squared increasing from 0.983 to 0.984. As the first order version is also easier to present, we might want to use this as our 'best' model for representing the hypothesis that the shape of the age-crime curve is time variant rather than time invariant. 
+ 
+## Iterrim  conclusion
+ 
+ Regardless of which time-varying model we use, all models tend to outperform the time-invariant model in terms of AIC and BIC. However, we should also bear in mind that the time-invariant model has a very high model fit, with R-squared values of around 0.96. There is therefore evidence in support of both positions: people arguing that the age-crime curve is invariant over time can point to the very high model fit of a time-invariant mode; people arguing that the age-crime curve is varying over time can point to the superior penalised model fits of models which allow the shape of the age-crime curve to vary with time, largely regardless of how these time-varying models are operationalised. 
+ 
+## Predictions 
+
+Something we might want to to is compare predicted values against actual values for specific years, using different model specifications. For brevity, we will look at how the models compare with actual results for the years 1999, 2000 and 2010. 
+
+```{r}
+
+ages <- 16:50
+predict_data <- data.frame(
+  age = ages, 
+  sex = rep(c("male", "female"), each = length(ages)),
+  year = rep(c(1990, 2000, 2010), each = 2 * length(ages))
+)
+
+predict_data$year2 <- predict_data$year - 1989
+
+rm(ages)
+
+predict_invariant <- predict(best_invariant_model, newdata = predict_data)
+predict_variant_1 <- predict(t1_model, newdata = predict_data)
+predict_variant_3 <- predict(t3_model, newdata = predict_data)
+
+combined_predictions <- data.frame(
+  predict_data,
+  invariant = predict_invariant, 
+  t1 = predict_variant_1,
+  t3 = predict_variant_3
+) %>% tbl_df
+
+combined_predictions <- combined_predictions %>% 
+  left_join(model_data) %>% gather(model_type, predicted_value, invariant:t3) %>% 
+  select(year, sex, age, actual= prop_convicted, model_type, predicted = predicted_value)
+
+
+combined_predictions %>% 
+  mutate(year = factor(year)) %>% 
+  ggplot(., aes(x = age)) + 
+  facet_grid(year~sex) + 
+  geom_point(aes(y = actual)) + 
+  geom_line(aes(y = predicted, group = model_type, colour = model_type))
+
+
