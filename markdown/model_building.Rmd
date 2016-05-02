@@ -2,7 +2,7 @@
 title: "Comparison of models"
 author: "Jon Minton"
 date: "30 April 2016"
-output: html_document
+output: pdf_document
 ---
 
 ## Introduction
@@ -272,40 +272,63 @@ summary(t3_model)
 
 Something we might want to to is compare predicted values against actual values for specific years, using different model specifications. For brevity, we will look at how the models compare with actual results for the years 1999, 2000 and 2010. 
 
+Plotting predicted against actual values shows something important about the models which include third order polynomials against age: although they capture the shape of the decline in conviction share with age after the age of peak conviction, they do not capture the first part of the curve, i.e. the rapid rise in conviction propensity from the age of 16 to 17 or 18 years (i.e. age of peak conviction). A number of additional models are also calculated and compared below. The model 'time invariant complex' does not allow the curve to vary with time, but does use a 10th order polynomial with age, so should be able to represent this left hand side of the figure. The mode' t3 complex' uses the third order polynomial of time interacted with the 10th order polynomial of age, so is the most complicated and flexible of all models presented here. The AIC and BIC of these models are also presented.
+
 ```{r}
 
-ages <- 16:50
-predict_data <- data.frame(
-  age = ages, 
-  sex = rep(c("male", "female"), each = length(ages)),
-  year = rep(c(1990, 2000, 2010), each = 2 * length(ages))
+predicted_actual_values <- model_data
+
+# I also want to compare all these models against 10th order poly
+
+model_10_poly_invariant <- lm(prop_convicted ~ poly(age, 10) * sex, data = model_data)
+model_10_poly_variant <- model_data %>% ungroup() %>% mutate(year2 = year - min(year)) %>% lm(prop_convicted ~ poly(age, 10) * sex * poly(year2, 3), data = .)
+
+
+
+predicted_actual_values <- data.frame(
+  predicted_actual_values,
+  predicted_time_invariant = best_invariant_model$fitted.values,
+  predicted_time_invariant_complex = model_10_poly_invariant$fitted.values,
+  predicted_t1 = t1_model$fitted.values,
+  predicted_t3 = t3_model$fitted.values,
+  predicted_t3_complex = model_10_poly_variant$fitted.values
+) %>% tbl_df %>% 
+  select(sex, year, age, actual = prop_convicted, contains("predicted")) %>% 
+  gather(key = "model", value = "prediction", contains("predicted")) %>% 
+  mutate(model = str_replace(model, "^predicted\\_", ""))
+
+AIC(
+  best_invariant_model,
+  model_10_poly_invariant,
+  t1_model,
+  t3_model,
+  model_10_poly_variant
 )
 
-predict_data$year2 <- predict_data$year - 1989
-
-rm(ages)
-
-predict_invariant <- predict(best_invariant_model, newdata = predict_data)
-predict_variant_1 <- predict(t1_model, newdata = predict_data)
-predict_variant_3 <- predict(t3_model, newdata = predict_data)
-
-combined_predictions <- data.frame(
-  predict_data,
-  invariant = predict_invariant, 
-  t1 = predict_variant_1,
-  t3 = predict_variant_3
-) %>% tbl_df
-
-combined_predictions <- combined_predictions %>% 
-  left_join(model_data) %>% gather(model_type, predicted_value, invariant:t3) %>% 
-  select(year, sex, age, actual= prop_convicted, model_type, predicted = predicted_value)
+BIC(
+  best_invariant_model,
+  model_10_poly_invariant,
+  t1_model,
+  t3_model,
+  model_10_poly_variant
+)
 
 
-combined_predictions %>% 
+predicted_actual_values %>% 
+  filter(year %in% c(1990, 2000, 2010)) %>% 
   mutate(year = factor(year)) %>% 
   ggplot(., aes(x = age)) + 
-  facet_grid(year~sex) + 
+  facet_grid(sex ~ year, scales = "free_y") + 
   geom_point(aes(y = actual)) + 
-  geom_line(aes(y = predicted, group = model_type, colour = model_type))
+  geom_line(aes(y = prediction, group = model, colour = model)) + 
+  labs(y = "Share of year's convictions associated with each age-sex group", x = "Age in years")
+
+```
 
 
+## Discussion
+
+As both the graphs comparing fitted against actual values, and the calculations of penalised model fit using AIC and BIC demonstrate, a considerable improvement in the quality of the fit can be found with models that allow both polynomials of year and age, and for interactions between age, year and sex.
+However, models using more parameters are both harder to explain and more liable to be 'over-fit', meaning they may be less effective for projections than simpler models using fewer parameters. It may be possible to assess this further by seeing, for example, how effective different models fit on data up to (say) 2000 are at predicting shares after 2000. 
+
+Regarding the main hypothesis being evaluated - whether the age-crime curve is variant or invariant over time - there is reasonable evidence that the shape of the age-crime curve has changed over time, and so that including period terms produces substantial improvement in model fit. However it is also important not to forget that the fit of almost all models tends to be very high. For exampe, the simpler time-invariant model has an adjusted R squared value of `r round(summary(best_invariant_model)$adj.r.squared, 3)`, compared with an adjusted R squared of `r round(summary(model_10_poly_variant)$adj.r.squared, 3)` for the most complex of the models, so the actual improvement in model fit, at least over the current period, has been relatively modest. 
